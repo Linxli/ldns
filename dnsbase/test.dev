@@ -1,0 +1,20 @@
+
+; <<>> DiG 9.18.30-0ubuntu0.24.04.2-Ubuntu <<>> linxli.li
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20600
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;linxli.li.			IN	A
+
+;; ANSWER SECTION:
+linxli.li.		273	IN	A	217.26.48.101
+
+;; Query time: 3 msec
+;; SERVER: 10.255.255.254#53(10.255.255.254) (UDP)
+;; WHEN: Sun Oct 19 16:05:49 CEST 2025
+;; MSG SIZE  rcvd: 54
+
