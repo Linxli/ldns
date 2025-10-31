@@ -1,0 +1,26 @@
+
+# Build stage
+FROM --platform=$BUILDPLATFORM rust:latest as builder
+ARG TARGET
+# Install musl-tools
+RUN apt-get update && apt-get install -y musl-tools gcc-x86_64-linux-gnu
+#    apt-get install -y gcc-x86_64-linux-gnu
+RUN rustup target add x86_64-unknown-linux-musl
+
+# Build for the target platform
+WORKDIR /app 
+COPY ./dnsraw/ .
+# Set the linker for the target
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-gnu-gcc
+
+RUN cargo build --release --target $TARGET --verbose
+# Final stage
+FROM alpine:3.18
+
+# Copy the binary
+COPY --from=builder /app/dnsraw/target/$TARGET/release/dnsraw /usr/local/bin/
+RUN chmod +x /usr/local/bin/dnsraw
+
+EXPOSE 54/udp
+ENTRYPOINT ["dnsraw"]
+

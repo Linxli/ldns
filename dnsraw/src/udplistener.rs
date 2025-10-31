@@ -1,70 +1,62 @@
+use crate::{blocklookup, resolver};
 use hickory_proto::{
     op::{Message, MessageType, OpCode, Query, ResponseCode},
     rr::{Name, RData, Record, RecordType, rdata},
     serialize::binary::{BinEncodable, BinEncoder},
 };
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 use tokio::net::UdpSocket;
 
-use crate::resolver;
-
 pub async fn listener() -> std::io::Result<()> {
-    {
-        //open the port
-        let socket = UdpSocket::bind("127.0.0.1:34254").await?;
-        println!("Listening on 127.0.0.1:34254...");
-        let mut buf = [0; 1024];
-        loop {
-            let (length, src) = socket.recv_from(&mut buf).await?;
-            println!("Received {} bytes from {:?}", length, src);
+    //open the port
+    let socket = UdpSocket::bind("0.0.0.0:53").await?;
+    println!("Listening on 0.0.0.0:53...");
+    let mut buf = [0; 1024];
 
-            //Parse the packet as DNS
-            if let Ok(packet) = Message::from_vec(&buf[..length]) {
-                let header = packet.header();
-                let quest = packet.queries();
+    loop {
+        let (length, src) = socket.recv_from(&mut buf).await?;
+        println!("Received {} bytes from {:?}", length, src);
 
-                println!("DNS ID: {}", header.id());
+        //Parse the packet as DNS
+        if let Ok(packet) = Message::from_vec(&buf[..length]) {
+            let header = packet.header();
+            let quest = packet.queries();
 
-                for q in quest {
-                    let domain_name = q.name();
+            println!("DNS ID: {}", header.id());
+            println!("Query: {:?}", quest);
 
-                    if domain_name.is_empty() || domain_name.len() < 2 {
-                        break;
-                    };
+            for q in quest {
+                let domain_name = q.name();
+                let record_type = q.query_type();
+                println!("Domain: {}, Record Type: {:?}", domain_name, record_type);
 
-                    let record_type = q.query_type();
-                    println!("Domain: {}, Record Type: {:?}", domain_name, record_type);
-
-                    if record_type == RecordType::A {
+                let all_addresses: Vec<IpAddr> =
+                    if blocklookup::check_dn_block_list(domain_name.clone()) {
+                        vec![IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))]
+                    } else if record_type == RecordType::A {
                         // Query Operatin on record_type A
                         println!("Query Operatin on record_type A");
-                        let all_addresses =
-                            resolver::resolve_domain(&domain_name.to_string()).await?;
-                        //let payload = resolver::get_ip(all_addresses);
-                        let payload = parsing_dns_packet(
-                            header.id(),
-                            &domain_name,
-                            record_type,
-                            all_addresses,
-                        );
-                        socket.send_to(&payload, src).await?;
-                    }
-                }
-            } else {
-                println!("this is an escape, there was a ERROR with the recived packet.");
+                        match resolver::resolve_domain(&domain_name.to_string()).await {
+                            Ok(ips) => ips,
+                            Err(e) => {
+                                eprintln!("Failed to resolve the domain: {}", e);
+                                vec![]
+                            }
+                        }
+                    } else {
+                        vec![]
+                    };
+
+                let payload =
+                    parsing_dns_packet(header.id(), &domain_name, record_type, all_addresses);
+                socket.send_to(&payload, src).await?;
             }
-
-            // Redeclare `buf` as slice of the received data and send reverse data back to origin.
-            buf.reverse();
-            //println!("{:?} {:?}", buf, &src);
-            socket.send_to(&buf, &src).await?;
+        } else {
+            println!("this is an escape, there was a ERROR with the recived packet.");
         }
-    } // the socket is closed here
-
-    //Ok(())
+    }
 }
 
-#[allow(dead_code)]
 pub fn parsing_dns_packet(
     id: u16,
     query_name: &Name,

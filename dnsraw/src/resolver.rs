@@ -18,6 +18,7 @@ pub async fn resolve_domain(domain_name: &String) -> std::io::Result<Vec<IpAddr>
     }
 }
 
+#[allow(dead_code)]
 pub fn get_ip(addrs: Vec<IpAddr>) -> Vec<u8> {
     let bytes: Vec<u8> = addrs
         .into_iter()
