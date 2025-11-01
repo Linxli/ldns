@@ -15,6 +15,7 @@ codegen-units = 1
 
 
 [dependencies]
+curl = "0.4.49"
 hickory-proto = "0.25.2"
 hickory-resolver = "0.25.2"
 reqwest = "0.12.24"
