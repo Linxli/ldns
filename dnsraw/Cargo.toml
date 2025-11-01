@@ -18,6 +18,4 @@ codegen-units = 1
 curl = "0.4.49"
 hickory-proto = "0.25.2"
 hickory-resolver = "0.25.2"
-reqwest = "0.12.24"
 tokio = {version = "1.48.0", features = ["full"]}
-trust-dns-resolver = "0.23.2"
