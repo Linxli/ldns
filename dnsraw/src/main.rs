@@ -8,7 +8,7 @@ async fn main() {
     let traffic = "start of the program";
 
     //#[allow(unused_must_use)]
-    blocklookup::check_blocklist_update(1);
+    tokio::spawn(blocklookup::check_blocklist_update(1)); // tmie in hour
 
     println!("{:?}", traffic);
 
