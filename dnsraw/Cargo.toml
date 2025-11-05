@@ -7,6 +7,10 @@ edition = "2024"
 name = "dnsraw"
 path = "src/main.rs"
 
+[lib]
+path = "src/lib.rs"
+
+
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
 lto = true
@@ -19,3 +23,4 @@ reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"
 hickory-proto = "0.25.2"
 hickory-resolver = "0.25.2"
 tokio = {version = "1.48.0", features = ["full"]}
+lazy_static = "1.5.0"

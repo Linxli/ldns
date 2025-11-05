@@ -1,0 +1,28 @@
+[tasks.check]
+dependencies = [
+    "build",
+    "test",
+    "clippy",
+    "fmt",
+    "coverage-tarpaulin"  # Use this instead of "coverage"
+]
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--verbose"]
+
+[tasks.test]
+command = "cargo"
+args = ["test", "--verbose"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--", "-D", "warnings"]
+
+[tasks.fmt]
+command = "cargo"
+args = ["fmt", "--", "--check"]
+
+[tasks.coverage-tarpaulin]
+command = "cargo"
+args = ["tarpaulin", "--skip-clean", "--out", "Xml"]

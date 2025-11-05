@@ -31,7 +31,7 @@ pub async fn listener() -> std::io::Result<()> {
                 println!("Domain: {}, Record Type: {:?}", domain_name, record_type);
 
                 let all_addresses: Vec<IpAddr> =
-                    if blocklookup::check_dn_block_list(domain_name.clone()) {
+                    if blocklookup::check_dn_block_list(domain_name.clone()).await {
                         vec![IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))]
                     } else if record_type == RecordType::A {
                         // Query Operatin on record_type A
@@ -48,7 +48,7 @@ pub async fn listener() -> std::io::Result<()> {
                     };
 
                 let payload =
-                    parsing_dns_packet(header.id(), &domain_name, record_type, all_addresses);
+                    parsing_dns_packet(header.id(), domain_name, record_type, all_addresses);
                 socket.send_to(&payload, src).await?;
             }
         } else {

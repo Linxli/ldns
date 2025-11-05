@@ -1,24 +1,28 @@
 use hickory_proto::rr::domain::Name;
+use lazy_static::lazy_static;
 use reqwest::header::{ETAG, IF_NONE_MATCH, LAST_MODIFIED, USER_AGENT};
 use std::fs::read_to_string;
+use std::sync::Arc;
 use tokio::fs;
+use tokio::sync::RwLock;
 use tokio::time;
 
 //static BLOCKLIST: OnceCell<String> = OnceCell::new();
 const DNS_LIST: &str = "/Users/fabio/ldns/dnsblock.txt";
 const DNS_LIST_URL: &str =
     "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/ultimate.txt";
+lazy_static! {
+    static ref FILE_BLOCK_DATA: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
+}
 
-// fn load_block_list() -> Result<(), Box<dyn std::error::Error>> {
-//     let content = read_to_string(DNS_LIST)?;
-//     BLOCKLIST.set(content).map_err(|_| "Blocklist ist already loaded")?;
-//     Ok(())
-// }
+pub async fn load_file() {
+    let mut data = FILE_BLOCK_DATA.write().await;
+    *data = read_to_string(DNS_LIST).expect("Error at loading the blocklist!!!");
+}
 
-pub fn check_dn_block_list(qname: Name) -> bool {
+pub async fn check_dn_block_list(qname: Name) -> bool {
     let name = qname.to_string();
-    let content = read_to_string(DNS_LIST).expect("Error at loading the blocklist!!!"); // BLOCKLIST.get().expect("Blocklist ist not loaded");
-
+    let content = FILE_BLOCK_DATA.read().await.to_string();
     content
         .lines()
         .filter(|line| line.starts_with("||") && !line.starts_with("||["))
@@ -81,6 +85,7 @@ pub async fn check_blocklist_update(interval_hours: u64) {
                         } else {
                             println!("Blocklist updated successfully!");
                         }
+                        load_file().await; // loading the data into the global string
                     }
                     Err(e) => eprintln!("Failed to read response body: {}", e),
                 }
