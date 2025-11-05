@@ -6,20 +6,17 @@ on:
     branches: [ "main" ]
 env:
   CARGO_TERM_COLOR: always
-
 jobs:
   build_and_test:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt, clippy
-
       - uses: actions/cache@v3
         with:
           path: |
@@ -27,33 +24,24 @@ jobs:
             ~/.cargo/git
             dnsraw/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('dnsraw/Cargo.lock') }}
-
       - name: Build
         working-directory: dnsraw
         run: cargo build --verbose
-
       - name: Run tests
         working-directory: dnsraw
         run: cargo test --verbose
-
       - name: Lint with Clippy
         working-directory: dnsraw
         run: cargo clippy -- -D warnings
-
       - name: Check formatting
         working-directory: dnsraw
         run: cargo fmt -- --check
-
       - name: Code coverage
         working-directory: dnsraw
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: '0.23.0'
-          args: '--skip-clean --out Xml'
+        run: cargo tarpaulin --skip-clean --out Xml
         continue-on-error: true
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: cobertura.xml
+          path: dnsraw/cobertura.xml
