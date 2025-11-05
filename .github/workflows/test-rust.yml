@@ -51,12 +51,12 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.23.0'
-          args: '----skip-clean --out Xml'
+          args: '--skip-clean --out Xml'
         continue-on-error: true  # Optional: Remove if you want to enforce coverage
 
       # Optional: Upload coverage report as an artifact
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: cobertura.xml
