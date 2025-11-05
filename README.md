@@ -1,5 +1,5 @@
-[![Build Status](https://github.com/yourusername/yourrepo/actions/workflows/rust.yml/badge.svg)](https://github.com/yourusername/yourrepo/actions)
-[![Code Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/yourusername/yourrepo/actions)
+[![Build Status](https://github.com/linxli/ldns/actions/workflows/test-rust.yml/badge.svg)](https://github.com/linxli/ldns/actions)
+[![Code Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/linxli/ldns/actions)
 
 # DNS
 Learning how DNS Works and creating my own DNS service
