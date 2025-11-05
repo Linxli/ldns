@@ -5,6 +5,7 @@
 Learning how DNS Works and creating my own DNS service
 
 
+# Usage
 ### Building and running the application
 
 When you're ready, start the application by running:
