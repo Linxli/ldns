@@ -1,5 +1,5 @@
 // Integration tests for the API endpoints
-use actix_web::{test, App};
+use actix_web::{App, test};
 use serde_json::json;
 
 /// Tests the PUT /blocklist endpoint with a mock HTTP server
@@ -25,9 +25,8 @@ async fn test_update_blocklist_success() {
 
     // Step 2: Create the actix-web test app
     // This is like running the real server, but in-memory for testing
-    let app = test::init_service(
-        App::new().service(dnsraw::api::update_blocklist_endpoint())
-    ).await;
+    let app =
+        test::init_service(App::new().service(dnsraw::api::update_blocklist_endpoint())).await;
 
     // Step 3: Make a test HTTP request
     let mock_url = format!("{}/blocklist.txt", server.url());
@@ -61,9 +60,8 @@ async fn test_update_blocklist_success() {
 /// Teaching moment: Testing error cases is as important as testing success!
 #[tokio::test]
 async fn test_update_blocklist_invalid_url() {
-    let app = test::init_service(
-        App::new().service(dnsraw::api::update_blocklist_endpoint())
-    ).await;
+    let app =
+        test::init_service(App::new().service(dnsraw::api::update_blocklist_endpoint())).await;
 
     let req = test::TestRequest::put()
         .uri("/blocklist")
@@ -78,7 +76,12 @@ async fn test_update_blocklist_invalid_url() {
     assert_eq!(resp.status(), 400, "Should return 400 for invalid URL");
 
     let body: serde_json::Value = test::read_body_json(resp).await;
-    assert!(body["error"].as_str().unwrap().contains("Invalid URL format"));
+    assert!(
+        body["error"]
+            .as_str()
+            .unwrap()
+            .contains("Invalid URL format")
+    );
 }
 
 /// Tests that network failures are handled gracefully
@@ -93,9 +96,8 @@ async fn test_update_blocklist_download_failure() {
         .create_async()
         .await;
 
-    let app = test::init_service(
-        App::new().service(dnsraw::api::update_blocklist_endpoint())
-    ).await;
+    let app =
+        test::init_service(App::new().service(dnsraw::api::update_blocklist_endpoint())).await;
 
     let mock_url = format!("{}/nonexistent.txt", server.url());
     let req = test::TestRequest::put()
@@ -129,9 +131,8 @@ async fn test_update_blocklist_empty() {
         .create_async()
         .await;
 
-    let app = test::init_service(
-        App::new().service(dnsraw::api::update_blocklist_endpoint())
-    ).await;
+    let app =
+        test::init_service(App::new().service(dnsraw::api::update_blocklist_endpoint())).await;
 
     let mock_url = format!("{}/empty.txt", server.url());
     let req = test::TestRequest::put()
@@ -146,7 +147,10 @@ async fn test_update_blocklist_empty() {
     assert_eq!(resp.status(), 200);
 
     let body: serde_json::Value = test::read_body_json(resp).await;
-    assert_eq!(body["domains_loaded"], 0, "Empty blocklist should load 0 domains");
+    assert_eq!(
+        body["domains_loaded"], 0,
+        "Empty blocklist should load 0 domains"
+    );
 
     mock.assert_async().await;
 }
@@ -154,9 +158,8 @@ async fn test_update_blocklist_empty() {
 /// Tests malformed JSON request
 #[tokio::test]
 async fn test_update_blocklist_malformed_json() {
-    let app = test::init_service(
-        App::new().service(dnsraw::api::update_blocklist_endpoint())
-    ).await;
+    let app =
+        test::init_service(App::new().service(dnsraw::api::update_blocklist_endpoint())).await;
 
     // Send request with wrong field name
     let req = test::TestRequest::put()

@@ -17,16 +17,3 @@ pub async fn resolve_domain(domain_name: &str) -> std::io::Result<Vec<IpAddr>> {
         }
     }
 }
-
-// #[allow(dead_code)]
-// pub fn get_ip(addrs: Vec<IpAddr>) -> Vec<u8> {
-//     let bytes: Vec<u8> = addrs
-//         .into_iter()
-//         .flat_map(|ip| match ip {
-//             IpAddr::V4(ipv4) => ipv4.octets().to_vec(),
-//             IpAddr::V6(ipv6) => ipv6.octets().to_vec(),
-//         })
-//         .collect();
-//     println!("IPs get disected {:?}", &bytes[..]);
-//     return bytes;
-// }

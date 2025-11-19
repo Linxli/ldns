@@ -8,7 +8,6 @@ use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::time;
 
-//static BLOCKLIST: OnceCell<String> = OnceCell::new();
 const DNS_LIST: &str = "dnsblock.txt";
 const DNS_LIST_URL: &str =
     "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/ultimate.txt";
@@ -31,7 +30,7 @@ fn parse_blocklist(raw: String) -> HashSet<String> {
 ///
 /// Returns the number of domains loaded
 ///
-/// Teaching moment: Using Option<Vec<u8>> to distinguish:
+/// Using Option<Vec<u8>> to distinguish:
 /// - None: Read from disk file
 /// - Some(bytes): Use these bytes (even if empty!)
 pub async fn load_file(bytes: Option<Vec<u8>>) -> usize {

@@ -42,16 +42,16 @@ async fn update_blocklist(msg: web::Json<BlocklistUpdateRequest>) -> impl Respon
     let url = &msg.url;
 
     // Step 1: Validate URL format
-    // Teaching moment: The url crate's parse() returns Result<Url, ParseError>
-    // We use match to handle both success and error cases
-    if let Err(_) = reqwest::Url::parse(url) {
+    // The url crate's parse() returns Result<Url, ParseError>
+    // We use is_err() to check if parsing failed
+    if reqwest::Url::parse(url).is_err() {
         return HttpResponse::BadRequest().json(ErrorResponse {
             error: format!("Invalid URL format: {}", url),
         });
     }
 
     // Step 2: Download the blocklist
-    // Teaching moment: reqwest is async, so we use .await
+    // reqwest is async, so we use .await
     // Building a client with custom user-agent (good HTTP etiquette!)
     let client = match reqwest::Client::builder()
         .user_agent("ldns-api/1.0")
@@ -93,7 +93,7 @@ async fn update_blocklist(msg: web::Json<BlocklistUpdateRequest>) -> impl Respon
     };
 
     // Step 3: Load into memory using our blocklookup module
-    // Teaching moment: This calls the load_file function which:
+    // This calls the load_file function which:
     // - Parses the raw text into a HashSet
     // - Acquires the write lock
     // - Updates the global BLOCKLIST
@@ -111,8 +111,9 @@ async fn update_blocklist(msg: web::Json<BlocklistUpdateRequest>) -> impl Respon
 
 /// Public function to get the update_blocklist service for testing
 ///
-/// Teaching moment: We expose this so tests can create an App with our endpoints
+/// We expose this so tests can create an App with our endpoints
 /// without starting a real HTTP server
+#[allow(dead_code)]
 pub fn update_blocklist_endpoint() -> actix_web::Scope {
     actix_web::web::scope("").service(update_blocklist)
 }
@@ -124,6 +125,9 @@ pub async fn server() {
         .run()
         .await
     {
-        eprintln!("An Error occurred while setting up the API webserver: {}", e);
+        eprintln!(
+            "An Error occurred while setting up the API webserver: {}",
+            e
+        );
     }
 }

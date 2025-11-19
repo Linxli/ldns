@@ -1,0 +1,44 @@
+# Rust build artifacts
+target/
+**/target/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+docs/
+
+# Test files
+tests/
+*_test.rs
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Local development
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# Coverage reports
+*.profraw
+*.profdata
+cobertura.xml
+tarpaulin-report.html
+
+# Temporary files
+*.tmp
+*.log
