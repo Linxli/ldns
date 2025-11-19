@@ -1,55 +1,100 @@
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Docker Compose reference guide at
-# https://docs.docker.com/go/compose-spec-reference/
+# Docker Compose configuration for LDNS project
+# Includes DNS server with REST API and Terminal UI for management
 
-# Here the instructions define your application as a service called "server".
-# This service is built from the Dockerfile in the current directory.
-# You can add other services your application may depend on here, such as a
-# database or a cache. For examples, see the Awesome Compose repository:
-# https://github.com/docker/awesome-compose
 services:
-  server:
+  # DNS Server with REST API
+  dns-server:
     build:
-      context: .
-      target: final
+      context: ./dnsraw
+      dockerfile: Dockerfile
+    container_name: ldns-dns-server
     ports:
-      - 53:53/udp
-      - 5678:443
-      - 5679:80
-      - 8080:8080  # API endpoint for configuration
+      - "53:53/udp"      # DNS queries port
+      - "8080:8080/tcp"  # REST API port for configuration
     restart: unless-stopped
     environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - UPSTREAM_DNS=1.1.1.1
-# The commented out section below is an example of how to define a PostgreSQL
-# database that your application can use. `depends_on` tells Docker Compose to
-# start the database before your application. The `db-data` volume persists the
-# database data between container restarts. The `db-password` secret is used
-# to set the database password. You must create `db/password.txt` and add
-# a password of your choosing to it before running `docker compose up`.
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#   db:
-#     image: postgres
-#     restart: always
-#     user: postgres
-#     secrets:
-#       - db-password
-#     volumes:
-#       - db-data:/var/lib/postgresql/data
-#     environment:
-#       - POSTGRES_DB=example
-#       - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-#     expose:
-#       - 5432
-#     healthcheck:
-#       test: [ "CMD", "pg_isready" ]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-# volumes:
-#   db-data:
-# secrets:
-#   db-password:
-#     file: db/password.txt
+      - RUST_LOG=info
+    volumes:
+      # Persist blocklist data
+      - dns-data:/app/data
+      # Mount blocklist file (optional - can be managed via API)
+      - ./dnsblock.txt:/app/dnsblock.txt:ro
+    networks:
+      - ldns-network
+    cap_add:
+      # Required for binding to port 53 as non-root user
+      - NET_BIND_SERVICE
+    cap_drop:
+      # Drop all other capabilities for security
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.ldns.service=dns-server"
+      - "com.ldns.description=DNS server with blocklist support"
+
+  # Terminal UI for DNS server management
+  tui:
+    build:
+      context: ./ldnsTUI
+      dockerfile: Dockerfile
+    container_name: ldns-tui
+    environment:
+      - DNS_API_URL=http://dns-server:8080
+      - RUST_LOG=info
+    networks:
+      - ldns-network
+    depends_on:
+      dns-server:
+        condition: service_healthy
+    # TUI requires interactive terminal - don't start automatically
+    # Use: docker compose run --rm tui
+    stdin_open: true
+    tty: true
+    profiles:
+      - tools
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    labels:
+      - "com.ldns.service=tui"
+      - "com.ldns.description=Terminal UI for DNS server management"
+
+# Define network for service communication
+networks:
+  ldns-network:
+    driver: bridge
+    name: ldns-network
+    labels:
+      - "com.ldns.network=main"
+
+# Define volumes for data persistence
+volumes:
+  dns-data:
+    name: ldns-dns-data
+    labels:
+      - "com.ldns.volume=dns-data"
+      - "com.ldns.description=DNS server persistent data"
