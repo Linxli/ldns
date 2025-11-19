@@ -1,6 +1,7 @@
 use hickory_proto::rr::domain::Name;
 use lazy_static::lazy_static;
 use reqwest::header::{ETAG, IF_NONE_MATCH, LAST_MODIFIED, USER_AGENT};
+use std::collections::HashSet;
 use std::fs::read_to_string;
 use std::sync::Arc;
 use tokio::fs;
@@ -8,30 +9,90 @@ use tokio::sync::RwLock;
 use tokio::time;
 
 //static BLOCKLIST: OnceCell<String> = OnceCell::new();
-const DNS_LIST: &str = "/Users/fabio/ldns/dnsblock.txt";
+const DNS_LIST: &str = "dnsblock.txt";
 const DNS_LIST_URL: &str =
     "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/ultimate.txt";
 lazy_static! {
-    static ref FILE_BLOCK_DATA: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
+    static ref BLOCKLIST: Arc<RwLock<HashSet<String>>> = Arc::new(RwLock::new(HashSet::new()));
 }
 
-pub async fn load_file() {
-    let mut data = FILE_BLOCK_DATA.write().await;
-    *data = read_to_string(DNS_LIST).expect("Error at loading the blocklist!!!");
-}
-
-pub async fn check_dn_block_list(qname: Name) -> bool {
-    let name = qname.to_string();
-    let content = FILE_BLOCK_DATA.read().await.to_string();
-    content
-        .lines()
+fn parse_blocklist(raw: String) -> HashSet<String> {
+    raw.lines()
         .filter(|line| line.starts_with("||") && !line.starts_with("||["))
         .map(|line| {
             line.trim_start_matches("||")
                 .trim_end_matches("^")
-                .to_string()
+                .to_lowercase()
         })
-        .any(|dom| name.trim_end_matches(".").contains(&dom))
+        .collect()
+}
+
+/// Loads a blocklist from file or provided bytes
+///
+/// Returns the number of domains loaded
+///
+/// Teaching moment: Using Option<Vec<u8>> to distinguish:
+/// - None: Read from disk file
+/// - Some(bytes): Use these bytes (even if empty!)
+pub async fn load_file(bytes: Option<Vec<u8>>) -> usize {
+    let raw_content = match bytes {
+        Some(data) => {
+            // Use the provided bytes (from API download)
+            String::from_utf8(data).expect("converting the bytes to utf8 failed")
+        }
+        None => {
+            // No bytes provided - read from disk (for startup)
+            match read_to_string(DNS_LIST) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprint!("File loading didn't work, and no bytes provided: {}", e);
+                    String::new() // Empty blocklist if nothing available
+                }
+            }
+        }
+    };
+
+    // Parse the raw string into a HashSet (heavy work done here!)
+    let parsed = parse_blocklist(raw_content);
+
+    // Get the count before moving the data
+    let count = parsed.len();
+
+    println!("Loaded {} blocked domains into memory", count);
+
+    // Acquire write lock and update the global blocklist
+    // DNS queries wait here (but only for a few milliseconds!)
+    let mut blocklist = BLOCKLIST.write().await;
+    *blocklist = parsed;
+    // Lock automatically released when 'blocklist' goes out of scope
+
+    // Return the count so callers know how many domains were loaded
+    count
+}
+
+pub async fn check_dn_block_list(qname: Name) -> bool {
+    // Normalize the query name (remove trailing dot, lowercase)
+    let name = qname.to_string().trim_end_matches(".").to_lowercase();
+
+    // Acquire read lock (many threads can do this simultaneously!)
+    let blocklist = BLOCKLIST.read().await;
+
+    // Check if this exact domain is blocked - O(1) lookup!
+    if blocklist.contains(&name) {
+        return true;
+    }
+
+    // Also check if any parent domain is blocked
+    // e.g., if "ads.google.com" isn't blocked, check "google.com"
+    let parts: Vec<&str> = name.split('.').collect();
+    for i in 1..parts.len() {
+        let parent = parts[i..].join(".");
+        if blocklist.contains(&parent) {
+            return true;
+        }
+    }
+
+    false
 }
 
 pub async fn check_blocklist_update(interval_hours: u64) {
@@ -85,7 +146,7 @@ pub async fn check_blocklist_update(interval_hours: u64) {
                         } else {
                             println!("Blocklist updated successfully!");
                         }
-                        load_file().await; // loading the data into the global string
+                        load_file(Some(bytes.clone().to_vec())).await;
                     }
                     Err(e) => eprintln!("Failed to read response body: {}", e),
                 }

@@ -13,6 +13,9 @@ mod resolver;
 #[path = "blocklookup.rs"]
 mod blocklookup_impl;
 
+// Expose API module for testing
+pub mod api;
+
 /// Resolve a domain and return a best-effort single IP address as a string.
 ///
 /// Behavior:
@@ -34,10 +37,7 @@ pub fn resolve(domain: &str) -> String {
     }) {
         v4
     } else {
-        addrs
-            .get(0)
-            .map(|ip| ip.to_string())
-            .unwrap_or_else(String::new)
+        addrs.first().map(|ip| ip.to_string()).unwrap_or_default()
     }
 }
 
@@ -59,8 +59,8 @@ pub mod blocklookup {
     pub fn check_dn_block_list(domain: &str) -> bool {
         let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
         rt.block_on(async {
-            // Ensure data is loaded before checking
-            blocklookup_impl::load_file().await;
+            // Load the local file (doesn't trigger download)
+            let _ = blocklookup_impl::load_file(None).await;
 
             let name = match Name::from_ascii(domain) {
                 Ok(n) => n,
