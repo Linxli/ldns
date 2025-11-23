@@ -26,6 +26,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('dnsraw/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - name: Copy blocklist for tests
+        run: cp dnsblock.txt dnsraw/dnsblock.txt
       - name: Build
         working-directory: dnsraw
         run: cargo build --verbose
